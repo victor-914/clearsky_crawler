@@ -1,6 +1,5 @@
 const express = require("express");
 const puppeteer = require("puppeteer");
-const mongoose = require("mongoose");
 
 const app = express();
 const PORT = 8000;
@@ -9,27 +8,7 @@ app.get("/new_contract", async (req, res) => {
   const browser = await puppeteer.launch({ headless: false }); // Set headless: true if you don't want to see the browser UI
 
   try {
-    // const pastLinkSchema = new mongoose.Schema({
-    //   contractLink: { type: String, required: true, unique: true },
-    //   createdAt: { type: Date, default: Date.now },
-    // });
-    // const Link = mongoose.model("Links", pastLinkSchema);
-
-    // await mongoose
-    //   .connect(
-    //     "mongodb+srv://boxinga41:ApgEv5YjA7PKVB9R@bidcluster.ttnnn.mongodb.net/?retryWrites=true&w=majority&appName=bidcluster",
-    //     {
-    //       useNewUrlParser: true,
-    //       useUnifiedTopology: true,
-    //     }
-    //   )
-    //   .then(() => {
-    //     console.log("Connected to MongoDB");
-    //   })
-    //   .catch((err) => {
-    //     console.error("Failed to connect to MongoDB", err);
-    //   });
-
+    
     const page = await browser.newPage();
     const PAGE_SIZE = 5;
     const RES = [];
@@ -194,7 +173,6 @@ app.get("/new_contract", async (req, res) => {
   } catch (error) {
     throw error;
   } finally {
-    mongoose.connection.close();
     browser.close();
   }
 });
