@@ -6,31 +6,32 @@ const app = express();
 const PORT = 8000;
 
 app.get("/new_contract", async (req, res) => {
+  const browser = await puppeteer.launch({ headless: false }); // Set headless: true if you don't want to see the browser UI
+
   try {
-    const pastLinkSchema = new mongoose.Schema({
-      contractLink: { type: String, required: true, unique: true },
-      createdAt: { type: Date, default: Date.now },
-    });
-    const Link = mongoose.model("Links", pastLinkSchema);
+    // const pastLinkSchema = new mongoose.Schema({
+    //   contractLink: { type: String, required: true, unique: true },
+    //   createdAt: { type: Date, default: Date.now },
+    // });
+    // const Link = mongoose.model("Links", pastLinkSchema);
 
-    await mongoose
-      .connect(
-        "mongodb+srv://boxinga41:ApgEv5YjA7PKVB9R@bidcluster.ttnnn.mongodb.net/?retryWrites=true&w=majority&appName=bidcluster",
-        {
-          useNewUrlParser: true,
-          useUnifiedTopology: true,
-        }
-      )
-      .then(() => {
-        console.log("Connected to MongoDB");
-      })
-      .catch((err) => {
-        console.error("Failed to connect to MongoDB", err);
-      });
+    // await mongoose
+    //   .connect(
+    //     "mongodb+srv://boxinga41:ApgEv5YjA7PKVB9R@bidcluster.ttnnn.mongodb.net/?retryWrites=true&w=majority&appName=bidcluster",
+    //     {
+    //       useNewUrlParser: true,
+    //       useUnifiedTopology: true,
+    //     }
+    //   )
+    //   .then(() => {
+    //     console.log("Connected to MongoDB");
+    //   })
+    //   .catch((err) => {
+    //     console.error("Failed to connect to MongoDB", err);
+    //   });
 
-    const browser = await puppeteer.launch({ headless: false }); // Set headless: true if you don't want to see the browser UI
     const page = await browser.newPage();
-    const PAGE_SIZE = 25;
+    const PAGE_SIZE = 5;
     const RES = [];
     await page.goto(
       `https://sam.gov/search/?page=1&pageSize=${PAGE_SIZE}&sort=-modifiedDate&sfm%5BsimpleSearch%5D%5BkeywordRadio%5D=ALL&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bkey%5D=roof&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bvalue%5D=roof&sfm%5Bstatus%5D%5Bis_active%5D=true`,
@@ -78,39 +79,40 @@ app.get("/new_contract", async (req, res) => {
 
       return links;
     });
+    console.log("🚀 ~ LINK ~ LINK:", LINK);
 
     //  WEBSITE URL
     // console.log(LINK);
 
     // FILTER FOR UNIQUE URL / NEW CONTRACT
-    async function getUniqueLinks(newLinks) {
-      try {
-        const existingLinks = await Link.find({}, "contractLink");
-        const existingUrls = existingLinks.map((link) => link.contractLink);
+    // async function getUniqueLinks(newLinks) {
+    //   try {
+    //     const existingLinks = await Link.find({}, "contractLink");
+    //     const existingUrls = existingLinks.map((link) => link.contractLink);
 
-        const uniqueLinks = newLinks.filter(
-          (link) => !existingUrls.includes(link)
-        );
+    //     const uniqueLinks = newLinks.filter(
+    //       (link) => !existingUrls.includes(link)
+    //     );
 
-        if (uniqueLinks.length > 0) {
-          // const linksToSave = uniqueLinks.map((url) => ({ url }));
-          //   await Link.insertMany(linksToSave);
-          //   console.log("Saved unique links to MongoDB.");
-        } else {
-          console.log("No unique links to save.");
-        }
+    //     if (uniqueLinks.length > 0) {
+    //       // const linksToSave = uniqueLinks.map((url) => ({ url }));
+    //       //   await Link.insertMany(linksToSave);
+    //       //   console.log("Saved unique links to MongoDB.");
+    //     } else {
+    //       console.log("No unique links to save.");
+    //     }
 
-        return uniqueLinks;
-      } catch (error) {
-        // console.error("Error processing links:", error);
-        throw error;
-      }
-    }
+    //     return uniqueLinks;
+    //   } catch (error) {
+    //     // console.error("Error processing links:", error);
+    //     throw error;
+    //   }
+    // }
 
-    const NEW_CONTRACT_TO_SCRAPE = await getUniqueLinks(LINK);
+    // const NEW_CONTRACT_TO_SCRAPE = await getUniqueLinks(LINK);
 
     // FILTER FOR EACH URL
-    for (const link of NEW_CONTRACT_TO_SCRAPE) {
+    for (const link of LINK) {
       try {
         await page.goto(link, { waitUntil: "networkidle2" });
 
@@ -193,7 +195,7 @@ app.get("/new_contract", async (req, res) => {
     throw error;
   } finally {
     mongoose.connection.close();
-    // browser.close();
+    browser.close();
   }
 });
 
