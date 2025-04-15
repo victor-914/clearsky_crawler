@@ -4,11 +4,12 @@ const puppeteer = require("puppeteer");
 const app = express();
 const PORT = 8000;
 
+//
+
 app.get("/new_contract", async (req, res) => {
   const browser = await puppeteer.launch({ headless: false }); // Set headless: true if you don't want to see the browser UI
 
   try {
-    
     const page = await browser.newPage();
     const PAGE_SIZE = 5;
     const RES = [];
@@ -98,6 +99,12 @@ app.get("/new_contract", async (req, res) => {
         // GET USEFUL CONTENT
         const content = await page.evaluate((el) => {
           return {
+            place_of_performance: document.querySelector(
+              "#classification-pop > div:nth-child(2)"
+            ),
+            department: document.querySelector(
+              "#header-hierarchy-level > div > div:nth-child(2)"
+            ),
             title:
               document.querySelector(
                 "#main-container > ng-component > page > div > div > div.page-content.row > div.nine.wide.column > div.usa-width-three-fourths.br-double-after.ng-star-inserted > h1"
@@ -158,9 +165,40 @@ app.get("/new_contract", async (req, res) => {
                 ?.textContent || "",
           };
         });
+        console.log("🚀 ~ content ~ content:", content)
 
-        RES.push(content);
-        console.log("🚀 ~ content ~ content:", content);
+        // file
+        // metadata: {
+        //   originalUrl: url,
+        //   downloadedAt: new Date().toISOString()
+        // }
+
+        // await page.waitForSelector("#attachments-links > div.ng-star-inserted > div:nth-child(2) > div.ng-star-inserted > sam-accordion > div");
+
+        // // Get the element handle
+        const element = await page.$("#attachments-links > div.ng-star-inserted > div:nth-child(2)");
+        console.log("🚀 ~ app.get ~ element:", element)
+
+        // if (!element) {
+        //   throw error("file not found ");
+        // }
+        // const response = await page.goto(fileUrl);
+        // const fileContent = await response.buffer();
+
+        // const fl = {
+        //   name: `download${extension}`,
+        //   size: fileContent.length,
+        //   type: contentType,
+        //   data: fileContent.toString("base64"), // Base64 encoded file
+        // };
+
+        // const con = { ...content, ...fl };
+
+        // // Get the file URL (this depends on what you're trying to download)
+        // // Example for a link: get the href attribute
+
+        // RES.push(con);
+        // console.log("🚀 ~ content ~ content:", content);
 
         // Save content to MongoDB
         // await collection.insertOne({ url: link, content });
