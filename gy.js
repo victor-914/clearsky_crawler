@@ -1,10 +1,9 @@
-const express = require("express");
 const puppeteer = require("puppeteer");
+const fs = require("fs");
+const path = require("path");
+const downloadPath = path.resolve("./download");
 
-const app = express();
-const PORT = 8000;
-
-app.get("/new_contract", async (req, res) => {
+async function scrapeNewContracts(options = {}) {
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -14,6 +13,12 @@ app.get("/new_contract", async (req, res) => {
     const page = await browser.newPage();
     const PAGE_SIZE = 8;
     const RES = [];
+
+    // // Set up download behavior
+    // await client.send("Page.setDownloadBehavior", {
+    //   behavior: "allow",
+    //   downloadPath: "./downloads", // Specify your download directory
+    // });
 
     await page.goto(
       `https://sam.gov/search/?page=1&pageSize=${PAGE_SIZE}&sort=-modifiedDate&sfm%5BsimpleSearch%5D%5BkeywordRadio%5D=ALL&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bkey%5D=roof&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bvalue%5D=roof&sfm%5Bstatus%5D%5Bis_active%5D=true`
@@ -56,7 +61,11 @@ app.get("/new_contract", async (req, res) => {
       return links;
     });
 
-  
+    const client = await page.createCDPSession();
+    await client.send("Page.setDownloadBehavior", {
+      behavior: "allow",
+      downloadPath: downloadPath,
+    });
 
     // FILTER FOR EACH URL
     for (const link of LINK) {
@@ -133,6 +142,7 @@ app.get("/new_contract", async (req, res) => {
           };
         });
 
+        // console.log("🚀 ~ scrapeNewContracts ~ finalPath:", finalPath);
         console.log("scrolling------------1");
         await page.evaluate((scrollDistance) => {
           window.scrollBy({
@@ -153,19 +163,46 @@ app.get("/new_contract", async (req, res) => {
         await page.mouse.wheel({ deltaY: 5000000 });
         console.log("scrolled------------19000");
 
+        // Create downloads directory if it doesn't exist
+        // if (!fs.existsSync("./downloads")) {
+        //   fs.mkdirSync("./downloads");
+        // }
+
+        // const db = await page
+        //   .locator(
+        //     "#attachments-links > div:nth-child(2) > span.download-button.ng-star-inserted > a > span:nth-child(2)"
+        //   )
+        //   .waitHandle();
+
         const conk = await page
           .locator(
             "#opp-view-attachments-accordion-section > opp-sam-upload-v2"
           )
           .waitHandle();
+        // console.log("🚀 ~ scrapeNewContracts ~ conk:", conk);
+
+        // const links = await page.evaluate(() => {
+        //   const fileLinks = Array.from(
+        //     document.querySelectorAll("a.file-link")
+        //   );
+        //   return fileLinks.map((link) => ({
+        //     text: link.textContent.trim().replace(/\s+/g, " "), // Clean up whitespace
+        //     href: link.href,
+        //   }));
+        // });
+
+
+        // console.log(links, "links");
 
         const urls = await page.$$eval("a.file-link", (links) =>
           links.map((link) => link.href)
         );
+        // console.log(urls, "urls");
 
         content.links = urls;
 
         console.log(content);
+
 
         RES.push(content);
       } catch (error) {
@@ -175,16 +212,13 @@ app.get("/new_contract", async (req, res) => {
 
     console.log(RES);
 
-    res.send(RES);
+    // res.send(RES);
   } catch (error) {
     console.log("🚀 ~ scrapeNewContracts ~ error:", error);
     throw error;
   } finally {
     browser.close();
   }
-});
+}
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+scrapeNewContracts();

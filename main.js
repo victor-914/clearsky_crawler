@@ -1,10 +1,9 @@
-const express = require("express");
 const puppeteer = require("puppeteer");
+const fs = require("fs");
+const path = require("path");
 
-const app = express();
-const PORT = 8000;
-
-app.get("/new_contract", async (req, res) => {
+async function scrapeNewContracts(options = {}) {
+    console.log("starting...........")
   const browser = await puppeteer.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -18,6 +17,8 @@ app.get("/new_contract", async (req, res) => {
     await page.goto(
       `https://sam.gov/search/?page=1&pageSize=${PAGE_SIZE}&sort=-modifiedDate&sfm%5BsimpleSearch%5D%5BkeywordRadio%5D=ALL&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bkey%5D=roof&sfm%5BsimpleSearch%5D%5BkeywordTags%5D%5B0%5D%5Bvalue%5D=roof&sfm%5Bstatus%5D%5Bis_active%5D=true`
     );
+
+    await page.waitForNavigation();
 
     await page.setViewport({ width: 800, height: 800 });
 
@@ -56,13 +57,12 @@ app.get("/new_contract", async (req, res) => {
       return links;
     });
 
-  
-
     // FILTER FOR EACH URL
     for (const link of LINK) {
       try {
         await page.goto(link, { waitUntil: "networkidle2" });
 
+        await page.waitForNavigation();
         // GET USEFUL CONTENT
         const content = await page.evaluate((el) => {
           return {
@@ -151,23 +151,40 @@ app.get("/new_contract", async (req, res) => {
 
         console.log("scrolling------------3");
         await page.mouse.wheel({ deltaY: 5000000 });
-        console.log("scrolled------------19000");
+        console.log("scrolling------------4");
 
-        const conk = await page
-          .locator(
-            "#opp-view-attachments-accordion-section > opp-sam-upload-v2"
-          )
-          .waitHandle();
+        // const db = await page
+        //   .locator(
+        //     "#attachments-links > div:nth-child(2) > span.download-button.ng-star-inserted > a > span:nth-child(2)"
+        //   )
+        //   .waitHandle();
+
+        // const conk = await page
+        //   .locator(
+        //     "#opp-view-attachments-accordion-section > opp-sam-upload-v2"
+        //   )
+        //   .waitHandle();
+        // console.log("🚀 ~ scrapeNewContracts ~ conk:", conk);
+
+        const links = await page.evaluate(() => {
+          const fileLinks = Array.from(
+            document.querySelectorAll("a.file-link")
+          );
+          return fileLinks.map((link) => ({
+            text: link.textContent.trim().replace(/\s+/g, " "), // Clean up whitespace
+            href: link.href,
+          }));
+        });
+
+        console.log(links,"links");
 
         const urls = await page.$$eval("a.file-link", (links) =>
           links.map((link) => link.href)
         );
 
-        content.links = urls;
-
-        console.log(content);
-
-        RES.push(content);
+        content.links = [...links,...urls]
+        console.log(content,"content")
+        console.log(urls,"urls");
       } catch (error) {
         console.error(`Error processing ${link}:`, error);
       }
@@ -175,16 +192,13 @@ app.get("/new_contract", async (req, res) => {
 
     console.log(RES);
 
-    res.send(RES);
+    // res.send(RES);
   } catch (error) {
     console.log("🚀 ~ scrapeNewContracts ~ error:", error);
     throw error;
   } finally {
-    browser.close();
+    // browser.close();
   }
-});
+}
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+scrapeNewContracts();
